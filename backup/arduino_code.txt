@@ -1,0 +1,444 @@
+#include <Servo.h>
+
+Servo myservo; 
+//Motor Pin Declaration Starts
+int motor1pin1 = 22;
+int motor1pin2 = 2;
+
+int motor2pin1 = 3;
+int motor2pin2 = 23;
+
+int motor3pin1 = 4;
+int motor3pin2 = 24;
+
+int motor4pin1 = 25;
+int motor4pin2 = 5;
+
+//Motor pin declaration ends
+//IR Pins Declaration
+const int IR1 = 26;
+const int IR2 = 29;
+const int IR3 = 28;
+int IR1Val,IR2Val,IR3Val;
+
+// defines pins numbers
+const int trigPin1 = 6;
+const int echoPin1 = 7;
+const int trigPin2 = 8;
+const int echoPin2 = 9;
+const int trigPin3 = 10;
+const int echoPin3 = 11;
+
+// defines variables
+long duration1;
+int distance1;
+long duration2;
+int distance2;
+long duration3;
+int distance3;
+
+bool userMode = false;
+bool automaticMode = false;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  //Motor Declaration
+  pinMode(motor1pin1, OUTPUT);
+  pinMode(motor1pin2, OUTPUT);
+  pinMode(motor2pin1, OUTPUT);
+  pinMode(motor2pin2, OUTPUT);
+  pinMode(motor3pin1, OUTPUT);
+  pinMode(motor3pin2, OUTPUT);
+  pinMode(motor4pin1, OUTPUT);
+  pinMode(motor4pin2, OUTPUT);
+  
+  Serial.println("Motor Declartion Completed");
+  //IR Declaration
+  pinMode(IR1,INPUT);
+  pinMode(IR2,INPUT);
+  pinMode(IR3,INPUT);
+  Serial.println("IR Declaration Completed");
+  myservo.attach(12);
+  myservo.write(30);
+  Serial.println("Initializing Servo to Zero");
+
+  pinMode(trigPin1, OUTPUT); // Sets the trigPin as an Output
+  pinMode(echoPin1, INPUT); // Sets the echoPin as an Input
+  pinMode(trigPin2, OUTPUT); // Sets the trigPin as an Output
+  pinMode(echoPin2, INPUT); // Sets the echoPin as an Input
+  pinMode(trigPin3, OUTPUT); // Sets the trigPin as an Output
+  pinMode(echoPin3, INPUT); // Sets the echoPin as an Input
+  Serial.println("Ultrasonic SR04 Declaration Completed");
+ 
+}
+
+void loop() {
+   //start if  here
+    if(!automaticMode && !userMode) {
+      if(Serial.available() > 0) {
+        char mode = Serial.read();
+        if(mode == '1') {
+          automaticMode = true;
+          Serial.println("Entered automatic mode...");
+        } else if(mode == '2') {
+          userMode = true;
+          Serial.println("Entered manual mode...");
+        } else if(mode == 'x') {
+          stop();
+          Serial.println("Stopping Vehicle...");
+        }
+      }
+    } else {
+      // If a mode is selected, execute the corresponding mode's logic
+      if(automaticMode) {
+        handleAutomaticMode();
+      } else if(userMode) {
+        handleManualMode();
+      }
+    }
+  }
+
+void handleAutomaticMode() {
+  Serial.println("Switched to Automatic mode...");
+  IR1Val = digitalRead(IR1);
+  IR2Val = digitalRead(IR2);
+  IR3Val = digitalRead(IR3);
+  Serial.print("IR1 - ");
+  Serial.print(IR1Val);
+  Serial.print("  IR2 - ");
+  Serial.print(IR2Val);
+  Serial.print("  IR3 - ");
+  Serial.print(IR3Val);
+  Serial.println("");
+
+  // Check if all IR sensors are active (indicating no obstacles)
+  if (IR1Val == 1 && IR2Val == 1 && IR3Val == 1) {
+    // Move forward in stop-go-stop-go motion
+    Serial.println("Move Forward and check for potholes");
+
+    // Start moving forward
+    analogWrite(motor1pin1, 130);
+    digitalWrite(motor1pin2, LOW);
+    analogWrite(motor2pin1, 130);
+    digitalWrite(motor2pin2, LOW);
+    analogWrite(motor3pin1, 130);
+    digitalWrite(motor3pin2, LOW);
+    analogWrite(motor4pin1, 130);
+    digitalWrite(motor4pin2, LOW);
+    
+    delay(200); // Move forward for 0.2 seconds
+
+    // Stop
+    digitalWrite(motor1pin1, LOW);
+    digitalWrite(motor1pin2, LOW);
+    digitalWrite(motor2pin1, LOW);
+    digitalWrite(motor2pin2, LOW);
+    digitalWrite(motor3pin1, LOW);
+    digitalWrite(motor3pin2, LOW);
+    digitalWrite(motor4pin1, LOW);
+    digitalWrite(motor4pin2, LOW);
+
+    // Check for depth of the road
+    Ultrasonic();
+
+    // Check if depth of the road is greater than 7cm
+    if (distance1 > 7 || distance2 > 7 || distance3 > 7) {
+      // Stop and call the servo code
+      ServoCentre(); // Call servo code (assuming it brings back to center position)
+      delay(3000); // Wait for servo operation to complete
+    }
+    
+    delay(200); // Pause before next movement
+  } else if (IR1Val == 1 && IR2Val == 1 && IR3Val == 0) {
+    // Turn right
+    Serial.println("Turn Right...");
+
+    // Implement right turn motion (example)
+    digitalWrite(motor1pin1, LOW);
+    digitalWrite(motor1pin2, LOW);
+    digitalWrite(motor2pin1, HIGH);
+    digitalWrite(motor2pin2, LOW);
+    digitalWrite(motor3pin1, HIGH);
+    digitalWrite(motor3pin2, LOW);
+    digitalWrite(motor4pin1, LOW);
+    digitalWrite(motor4pin2, LOW);
+    
+    delay(1000); // Duration of turn
+    
+    // Stop
+    digitalWrite(motor1pin1, LOW);
+    digitalWrite(motor1pin2, LOW);
+    digitalWrite(motor2pin1, LOW);
+    digitalWrite(motor2pin2, LOW);
+    digitalWrite(motor3pin1, LOW);
+    digitalWrite(motor3pin2, LOW);
+    digitalWrite(motor4pin1, LOW);
+    digitalWrite(motor4pin2, LOW);
+
+    delay(200); // Pause before next movement
+  } else if (IR1Val == 0 && IR2Val == 1 && IR3Val == 1) {
+    // Turn left
+    Serial.println("Turn Left");
+
+    // Implement left turn motion (example)
+    digitalWrite(motor1pin1, HIGH);
+    digitalWrite(motor1pin2, LOW);
+    digitalWrite(motor2pin1, LOW);
+    digitalWrite(motor2pin2, LOW);
+    digitalWrite(motor3pin1, LOW);
+    digitalWrite(motor3pin2, LOW);
+    digitalWrite(motor4pin1, HIGH);
+    digitalWrite(motor4pin2, LOW);
+    
+    delay(1000); // Duration of turn
+    
+    // Stop
+    digitalWrite(motor1pin1, LOW);
+    digitalWrite(motor1pin2, LOW);
+    digitalWrite(motor2pin1, LOW);
+    digitalWrite(motor2pin2, LOW);
+    digitalWrite(motor3pin1, LOW);
+    digitalWrite(motor3pin2, LOW);
+    digitalWrite(motor4pin1, LOW);
+    digitalWrite(motor4pin2, LOW);
+
+    delay(200); // Pause before next movement
+  } else {
+    // If obstacles detected, implement obstacle avoidance logic here
+  }
+
+  // Send completion signal to Raspberry Pi
+  Serial.println("Automatic mode completed");
+}
+
+
+// **************************************
+
+void moveForward() {
+    Serial.println("Moving Forward...");
+
+    // Motor A
+    digitalWrite(motor1pin1, HIGH);
+    digitalWrite(motor1pin2, LOW);
+    analogWrite(motor1pin1, 128);
+    
+    // Motor B
+    digitalWrite(motor2pin1, HIGH);
+    digitalWrite(motor2pin2, LOW);
+    analogWrite(motor2pin1, 128);
+
+    // Motor C
+    digitalWrite(motor3pin1, HIGH);
+    digitalWrite(motor3pin2, LOW);
+    analogWrite(motor3pin1, 128);
+
+    // Motor D
+    digitalWrite(motor4pin1, HIGH);
+    digitalWrite(motor4pin2, LOW);
+    analogWrite(motor4pin1, 128);
+
+    delay(200);
+}
+
+
+void turnLeft() {
+    Serial.println("Turning Left...");
+    
+    // Motor A
+    digitalWrite(motor1pin1, LOW);
+    digitalWrite(motor1pin2, HIGH);
+    analogWrite(motor1pin1, 128);
+    
+    // Motor B
+    digitalWrite(motor2pin1, HIGH);
+    digitalWrite(motor2pin2, LOW);
+    analogWrite(motor2pin1, 128);
+
+    // Motor C
+    digitalWrite(motor3pin1, LOW);
+    digitalWrite(motor3pin2, HIGH);
+    analogWrite(motor3pin1, 128);
+
+    // Motor D
+    digitalWrite(motor4pin1, HIGH);
+    digitalWrite(motor4pin2, LOW);
+    analogWrite(motor4pin1, 128);
+}
+
+void turnRight() {
+    Serial.println("Turning Right...");
+    
+    // Motor A
+    digitalWrite(motor1pin1, HIGH);
+    digitalWrite(motor1pin2, LOW);
+    analogWrite(motor1pin1, 128);
+    
+    // Motor B
+    digitalWrite(motor2pin1, LOW);
+    digitalWrite(motor2pin2, HIGH);
+    analogWrite(motor2pin1, 128);
+
+    // Motor C
+    digitalWrite(motor3pin1, HIGH);
+    digitalWrite(motor3pin2, LOW);
+    analogWrite(motor3pin1, 128);
+
+    // Motor D
+    digitalWrite(motor4pin1, LOW);
+    digitalWrite(motor4pin2, HIGH);
+    analogWrite(motor4pin1, 128);
+}
+
+void moveBackward() {
+    Serial.println("Moving Backward...");
+    
+    // Motor A
+    digitalWrite(motor1pin1, LOW);
+    digitalWrite(motor1pin2, HIGH);
+    analogWrite(motor1pin2, 128);
+    
+    // Motor B
+    digitalWrite(motor2pin1, LOW);
+    digitalWrite(motor2pin2, HIGH);
+    analogWrite(motor2pin2, 128);
+
+    // Motor C
+    digitalWrite(motor3pin1, LOW);
+    digitalWrite(motor3pin2, HIGH);
+    analogWrite(motor3pin2, 128);
+
+    // Motor D
+    digitalWrite(motor4pin1, LOW);
+    digitalWrite(motor4pin2, HIGH);
+    analogWrite(motor4pin2, 128);
+}
+
+void stop() {
+    Serial.println("Stopping Vehicle...");
+    // Motor A
+    digitalWrite(motor1pin1, LOW);
+    digitalWrite(motor1pin2, LOW);
+    analogWrite(motor1pin2, 0);
+    
+    // Motor B
+    digitalWrite(motor2pin1, LOW);
+    digitalWrite(motor2pin2, LOW);
+    analogWrite(motor2pin2, 0);
+
+    // Motor C
+    digitalWrite(motor3pin1, LOW);
+    digitalWrite(motor3pin2, LOW);
+    analogWrite(motor3pin2, 0);
+
+    // Motor D
+    digitalWrite(motor4pin1, LOW);
+    digitalWrite(motor4pin2, LOW);
+    analogWrite(motor4pin2, 0);
+
+}
+
+// *********************************************
+
+void handleManualMode() {
+    // Manual Mode
+    if(Serial.available() > 0) {
+      char val = Serial.read();
+      if(val == 'w') {
+        moveForward();
+        delay(200);
+      } else if(val == 's') {
+        moveBackward();
+        delay(200);
+      } else if(val == 'a') {
+        turnLeft();
+        delay(200);
+      } else if(val == 'd') {
+        turnRight();
+        delay(200);
+      } else if(val == 'x') {
+        stop();
+      }
+   }
+}
+
+void Ultrasonic() {
+  digitalWrite(trigPin1, LOW);
+  delayMicroseconds(2);
+  // Sets the trigPin on HIGH state for 10 micro seconds
+  digitalWrite(trigPin1, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin1, LOW);
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration1= pulseIn(echoPin1, HIGH);
+  // Calculating the distance
+  distance1 = duration1 * 0.034 / 2;
+  // Clears the trigPin
+  digitalWrite(trigPin2, LOW);
+  delayMicroseconds(2);
+  // Sets the trigPin on HIGH state for 10 micro seconds
+  digitalWrite(trigPin2, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin2, LOW);
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration2= pulseIn(echoPin2, HIGH);
+  // Calculating the distance
+  distance2 = duration2 * 0.034 / 2;
+  // Clears the trigPin
+  digitalWrite(trigPin3, LOW);
+  delayMicroseconds(2);
+  // Sets the trigPin on HIGH state for 10 micro seconds
+  digitalWrite(trigPin3, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin3, LOW);
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration3= pulseIn(echoPin3, HIGH);
+  // Calculating the distance
+  distance3 = duration3 * 0.034 / 2;
+  
+  
+  Serial.print("Distance1: ");
+  Serial.print(distance1);
+  Serial.print("  Distance2: ");
+  Serial.print(distance2);
+  Serial.print("  Distance3: ");
+  Serial.print(distance3);
+  Serial.println();
+ 
+  if(distance1>7)
+  {
+    ServoRight();
+  }
+  else if(distance2>7)
+  {
+    ServoCentre();    
+  }
+  else if(distance3>6)
+  {
+    Servoleft();
+  }
+  else{
+    Serial.println("No PotHoles");
+  }
+}
+
+void ServoRight() {
+  Serial.println("Rotating Servo to right and retun back to center");
+  myservo.write(0);
+  delay(3000);
+  myservo.write(30);
+}
+
+void Servoleft() {
+  Serial.println("Rotating Servo to Left and retun back to center");
+  myservo.write(60);
+  delay(3000);
+  myservo.write(30);
+}
+
+void ServoCentre() {
+  Serial.println("Stay for sometime");
+  myservo.write(30);
+  delay(3000);
+  
+}
