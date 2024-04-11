@@ -1,11 +1,6 @@
 import serial
 import manual_mode as mm
-
 ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)  # Update the port accordingly
-
-def readFromArduino():
-    line = ser.readline().decode('utf-8').rstrip()
-    print(line)
 
 def main_code():
     
@@ -15,7 +10,6 @@ def main_code():
         if val == "1":
             print("Entered automatic mode:\n")
             ser.write(b'1')
-            readFromArduino()
         elif val == "2":
             print("Entered MANUAL MODE:\n")
             ser.write(b'2')

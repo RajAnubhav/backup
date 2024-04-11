@@ -2,7 +2,6 @@ import serial
 import cv2
 import threading
 from picamera2 import Picamera2
-import main as mpy
 
 # Initialize Picamera2 instance
 picam2 = Picamera2()
@@ -10,7 +9,8 @@ picam2 = Picamera2()
 # Function to capture camera preview
 def show_camera_preview():
     picam2.start()
-    while not picam2.stopped:
+    camera_running = True
+    while camera_running:
         img = picam2.capture_array()
         
         img = cv2.resize(img, (480, 520))
@@ -21,6 +21,7 @@ def show_camera_preview():
         key = cv2.waitKey(1) & 0xFF
         if key == ord('x'):  # Press 'x' to quit
             picam2.stop()
+            camera_running = False
             break
 
     cv2.destroyAllWindows()
@@ -65,5 +66,26 @@ def control():
         else:
             print("Invalid choice. Please try again.")
 
+def main_code():
+    ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)  # Update the port accordingly
+    
+    while True:
+        val = input("Press 1 for automatic mode\nPress 2 for manual mode\nPress x to stop\n")
+            
+        if val == "1":
+            print("Entered automatic mode:\n")
+            ser.write(b'1')
+            show_camera_preview()  # Call camera preview function in automatic mode
+        elif val == "2":
+            print("Entered MANUAL MODE:\n")
+            ser.write(b'2')
+            if control() == 'automatic':
+                continue
+        elif val == "x":
+            print("Thank you. Have a nice day!")
+            exit(0)
+        else:
+            print("INVALID INPUT FROM USER\n")
+   
 if __name__ == "__main__":
-    control()
+    main_code()
